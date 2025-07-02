@@ -12,20 +12,13 @@ CYAN = "\033[36m"
 MAGENTA = "\033[35m"
 BLUE = "\033[34m"
 
-# Auto-install modules
+# Auto-install required modules
 try:
     import requests
 except ImportError:
     print(f"{YELLOW}[*] Installing 'requests'...{RESET}")
     os.system("pip install requests")
     import requests
-
-try:
-    from ipwhois import IPWhois
-except ImportError:
-    print(f"{YELLOW}[*] Installing 'ipwhois'...{RESET}")
-    os.system("pip install ipwhois")
-    from ipwhois import IPWhois
 
 def check_private_public(ip):
     try:
@@ -57,18 +50,35 @@ def geo_lookup(ip):
         print(f"{RED}[!] GeoIP Error: {e}{RESET}")
 
 def whois_lookup(ip):
-    print(f"\n{CYAN}--- WHOIS Lookup ---{RESET}")
+    print(f"\n{CYAN}--- WHOIS Lookup (rdap.org) ---{RESET}")
     try:
-        obj = IPWhois(ip)
-        results = obj.lookup_rdap()
-        print(f"{YELLOW}Network Name : {results['network']['name']}{RESET}")
-        print(f"{YELLOW}Country      : {results['network']['country']}{RESET}")
-        asn_desc = results.get('asn_description', 'N/A')
-        print(f"{YELLOW}ASN          : {results['asn']}{RESET}")
-        print(f"{YELLOW}ASN Org      : {asn_desc}{RESET}")
-        return asn_desc
+        url = f"https://rdap.org/ip/{ip}"
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            network = data.get('name', 'N/A')
+            country = data.get('country', 'N/A')
+            asn = data.get('handle', 'N/A')
+            asn_desc = 'N/A'
+
+            remarks = data.get('remarks')
+            if remarks:
+                for remark in remarks:
+                    if 'description' in remark:
+                        asn_desc = remark['description'][0]
+                        break
+
+            print(f"{YELLOW}Network Name : {network}{RESET}")
+            print(f"{YELLOW}Country      : {country}{RESET}")
+            print(f"{YELLOW}ASN          : {asn}{RESET}")
+            print(f"{YELLOW}ASN Org      : {asn_desc}{RESET}")
+
+            return asn_desc
+        else:
+            print(f"{RED}[!] Failed to fetch WHOIS info from RDAP API{RESET}")
+            return None
     except Exception as e:
-        print(f"{RED}[!] WHOIS Lookup Error: {e}{RESET}")
+        print(f"{RED}[!] WHOIS API Error: {e}{RESET}")
         return None
 
 def detect_isp_type(asn_desc):
