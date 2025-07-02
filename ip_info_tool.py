@@ -3,18 +3,27 @@ import sys
 import re
 import ipaddress
 
-# Auto-install required modules
+# Terminal color codes
+RESET = "\033[0m"
+GREEN = "\033[32m"
+YELLOW = "\033[33m"
+RED = "\033[31m"
+CYAN = "\033[36m"
+MAGENTA = "\033[35m"
+BLUE = "\033[34m"
+
+# Auto-install modules
 try:
     import requests
 except ImportError:
-    print("[*] Installing 'requests' module...")
+    print(f"{YELLOW}[*] Installing 'requests'...{RESET}")
     os.system("pip install requests")
     import requests
 
 try:
     from ipwhois import IPWhois
 except ImportError:
-    print("[*] Installing 'ipwhois' module...")
+    print(f"{YELLOW}[*] Installing 'ipwhois'...{RESET}")
     os.system("pip install ipwhois")
     from ipwhois import IPWhois
 
@@ -22,48 +31,48 @@ def check_private_public(ip):
     try:
         ip_obj = ipaddress.ip_address(ip)
         if ip_obj.is_private:
-            print("\n[+] IP Type: Private (Local Network IP)")
+            print(f"\n{MAGENTA}[+] IP Type: Private (Local Network IP){RESET}")
         else:
-            print("\n[+] IP Type: Public (Internet Facing IP)")
+            print(f"\n{GREEN}[+] IP Type: Public (Internet Facing IP){RESET}")
     except ValueError:
-        print("[!] Invalid IP address format.")
+        print(f"{RED}[!] Invalid IP address format.{RESET}")
 
 def geo_lookup(ip):
-    print("\n--- IP Geolocation (ipinfo.io) ---")
+    print(f"\n{CYAN}--- IP Geolocation (ipinfo.io) ---{RESET}")
     try:
         url = f"https://ipinfo.io/{ip}/json"
         response = requests.get(url, timeout=10)
         if response.status_code == 200:
             data = response.json()
-            print(f"IP Address   : {data.get('ip', 'N/A')}")
-            print(f"City         : {data.get('city', 'N/A')}")
-            print(f"Region       : {data.get('region', 'N/A')}")
-            print(f"Country      : {data.get('country', 'N/A')}")
-            print(f"Location     : {data.get('loc', 'N/A')}")
-            print(f"Organization : {data.get('org', 'N/A')}")
-            print(f"Timezone     : {data.get('timezone', 'N/A')}")
+            print(f"{YELLOW}IP Address   : {data.get('ip', 'N/A')}{RESET}")
+            print(f"{YELLOW}City         : {data.get('city', 'N/A')}{RESET}")
+            print(f"{YELLOW}Region       : {data.get('region', 'N/A')}{RESET}")
+            print(f"{YELLOW}Country      : {data.get('country', 'N/A')}{RESET}")
+            print(f"{YELLOW}Location     : {data.get('loc', 'N/A')}{RESET}")
+            print(f"{YELLOW}Organization : {data.get('org', 'N/A')}{RESET}")
+            print(f"{YELLOW}Timezone     : {data.get('timezone', 'N/A')}{RESET}")
         else:
-            print("[!] Failed to get GeoIP data.")
+            print(f"{RED}[!] Failed to get GeoIP data.{RESET}")
     except Exception as e:
-        print(f"[!] GeoIP Error: {e}")
+        print(f"{RED}[!] GeoIP Error: {e}{RESET}")
 
 def whois_lookup(ip):
-    print("\n--- WHOIS Lookup ---")
+    print(f"\n{CYAN}--- WHOIS Lookup ---{RESET}")
     try:
         obj = IPWhois(ip)
         results = obj.lookup_rdap()
-        print(f"Network Name : {results['network']['name']}")
-        print(f"Country      : {results['network']['country']}")
+        print(f"{YELLOW}Network Name : {results['network']['name']}{RESET}")
+        print(f"{YELLOW}Country      : {results['network']['country']}{RESET}")
         asn_desc = results.get('asn_description', 'N/A')
-        print(f"ASN          : {results['asn']}")
-        print(f"ASN Org      : {asn_desc}")
+        print(f"{YELLOW}ASN          : {results['asn']}{RESET}")
+        print(f"{YELLOW}ASN Org      : {asn_desc}{RESET}")
         return asn_desc
     except Exception as e:
-        print(f"[!] WHOIS Lookup Error: {e}")
+        print(f"{RED}[!] WHOIS Lookup Error: {e}{RESET}")
         return None
 
 def detect_isp_type(asn_desc):
-    print("\n--- ISP Type Detection ---")
+    print(f"\n{CYAN}--- ISP Type Detection ---{RESET}")
     if asn_desc:
         mobile_keywords = ["mobile", "cellular", "wireless", "Jio", "Airtel", "Vodafone", "Idea", "Vi", "Reliance"]
         broadband_keywords = ["broadband", "fiber", "fibernet", "DSL", "BSNL", "ACT", "Hathway", "Spectra"]
@@ -71,32 +80,33 @@ def detect_isp_type(asn_desc):
         lower_asn = asn_desc.lower()
 
         if any(keyword.lower() in lower_asn for keyword in mobile_keywords):
-            print("[+] ISP Type: Mobile Network")
+            print(f"{GREEN}[+] ISP Type: Mobile Network{RESET}")
             return "Mobile"
         elif any(keyword.lower() in lower_asn for keyword in broadband_keywords):
-            print("[+] ISP Type: Broadband / Fixed Line")
+            print(f"{GREEN}[+] ISP Type: Broadband / Fixed Line{RESET}")
             return "Broadband"
         else:
-            print("[+] ISP Type: Unknown / Other")
+            print(f"{MAGENTA}[+] ISP Type: Unknown / Other{RESET}")
             return "Unknown"
     else:
-        print("[!] ASN Info missing for ISP type detection.")
+        print(f"{RED}[!] ASN Info missing for ISP type detection.{RESET}")
         return "Unknown"
 
 def device_type_guess(isp_type):
-    print("\n--- Device Type Guess ---")
+    print(f"\n{CYAN}--- Device Type Guess ---{RESET}")
     if isp_type == "Mobile":
-        print("[+] Possible Device: Smartphone / Mobile Device")
+        print(f"{MAGENTA}[+] Possible Device: Smartphone / Mobile Device{RESET}")
     elif isp_type == "Broadband":
-        print("[+] Possible Device: Laptop / PC / Router")
+        print(f"{MAGENTA}[+] Possible Device: Laptop / PC / Router{RESET}")
     else:
-        print("[+] Possible Device: Cannot Determine (Unknown Network Type)")
+        print(f"{MAGENTA}[+] Possible Device: Cannot Determine (Unknown Network Type){RESET}")
 
 def main():
-    print("\n========== IP Information Tool ==========")
-    ip = input("Enter target IP address: ").strip()
+    print(f"\n{CYAN}========== IP Information Tool =========={RESET}")
+    print(f"{BLUE}Enter target IP address:{RESET} ", end="")
+    ip = input().strip()
     if not ip:
-        print("[!] No IP entered. Exiting.")
+        print(f"{RED}[!] No IP entered. Exiting.{RESET}")
         sys.exit()
 
     check_private_public(ip)
@@ -104,7 +114,7 @@ def main():
     asn_desc = whois_lookup(ip)
     isp_type = detect_isp_type(asn_desc)
     device_type_guess(isp_type)
-    print("\n========== Scan Complete ==========\n")
+    print(f"\n{CYAN}========== Scan Complete =========={RESET}\n")
 
 if __name__ == "__main__":
     main()
